@@ -14,7 +14,7 @@ import database as db_api
 
 load_dotenv()
 
-BOT_TOKEN = os.getenv("9237944530:AAH0e9rpzZZOkDdgG6eTtpcAJQE9tSJRSNo")
+BOT_TOKEN = os.getenv("9237944530:AAHsOGJStnHMb3_Ou_hMi-LV8jLnMfvZjXw")
 if not BOT_TOKEN:
     raise ValueError("Переменная окружения BOT_TOKEN не найдена! Добавьте её в настройки Render (Environment).")
 
