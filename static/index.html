@@ -1,0 +1,295 @@
+﻿<!DOCTYPE html>
+
+<html lang="ru">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Tamagotchi</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://telegram.org"></script>
+
+</head>
+
+<body>
+    <div id="game-container">
+
+        <div id="screen-creation" class="screen hidden">
+
+            <h2>Создай питомца</h2>
+
+            <input type="text" id="input-name" placeholder="Имя питомца..." maxlength="12">
+
+            <div class="type-selector">
+
+                <div class="type-opt active" onclick="selectType(this, 'cat')">🐱 Кот</div>
+
+                <div class="type-opt" onclick="selectType(this, 'dog')">🐶 Пес</div>
+
+                <div class="type-opt" onclick="selectType(this, 'hamster')">🐹 Хомяк</div>
+
+            </div>
+
+            <button class="btn-main" onclick="submitCreation()">Начать игру</button>
+
+        </div>
+
+
+
+        <div id="screen-main" class="screen hidden">
+
+            <div class="header-stats">
+
+                <span id="display-name">...</span>
+
+                <span class="badge-lvl">Lvl <mark id="val-level">1</mark></span>
+
+            </div>
+
+            <div class="xp-container">
+
+                <div class="xp-text">Опыт (XP)</div>
+
+                <div class="xp-bg"><div id="bar-xp" class="xp-fill"></div></div>
+
+            </div>
+
+            <div class="currency-row">💰 <span id="val-coins">0</span> монет</div>
+
+            <div class="pet-view"><div id="main-avatar">🐱</div></div>
+
+            <div class="stats-box">
+
+                <div class="stat-control">
+
+                    <div class="labels"><span>🍖 Сытость</span><span id="txt-satiety">0%</span></div>
+
+                    <div class="bar-bg"><div id="bar-satiety" class="bar-fill green"></div></div>
+
+                </div>
+
+                <div class="stat-control">
+
+                    <div class="labels"><span>⚽ Счастье</span><span id="txt-happiness">0%</span></div>
+
+                    <div class="bar-bg"><div id="bar-happiness" class="bar-fill orange"></div></div>
+
+                </div>
+
+                <div class="stat-control">
+
+                    <div class="labels"><span>💤 Энергия</span><span id="txt-energy">0%</span></div>
+
+                    <div class="bar-bg"><div id="bar-energy" class="bar-fill blue"></div></div>
+
+                </div>
+
+            </div>
+
+            <div class="actions-grid">
+
+                <button class="action-btn" onclick="performAction('feed')">Кормить (-15 💰)</button>
+
+                <button class="action-btn" onclick="performAction('play')">Играть (-20 💤)</button>
+
+                <button class="action-btn" onclick="performAction('sleep')">Спать</button>
+
+            </div>
+
+        </div>
+
+
+
+        <div id="screen-dead" class="screen hidden">
+
+            <h2>Твой питомец погиб... 😿</h2>
+
+            <button class="btn-main" onclick="showCreationScreen()">Завести нового</button>
+
+        </div>
+
+    </div>
+
+
+
+    <script>
+
+        const tg = window.Telegram.WebApp;
+
+        tg.ready(); tg.expand();
+
+        const userId = tg.initDataUnsafe?.user?.id || 777;
+
+        let selectedPetType = 'cat';
+
+
+
+        async function initGame() {
+
+            const res = await fetch(`/api/get_pet/${userId}`);
+
+            const data = await res.json();
+
+            if (!data.pet) showCreationScreen();
+
+            else if (data.pet.is_alive === 0) showDeadScreen();
+
+            else showMainScreen(data.pet);
+
+        }
+
+
+
+        function showCreationScreen() {
+
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+
+            document.getElementById('screen-creation').classList.remove('hidden');
+
+        }
+
+
+
+        function showDeadScreen() {
+
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+
+            document.getElementById('screen-dead').classList.remove('hidden');
+
+        }
+
+
+
+        function showMainScreen(pet) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+
+            document.getElementById('screen-main').classList.remove('hidden');
+
+            updateUI(pet);
+
+        }
+
+
+
+        function selectType(element, type) {
+
+            document.querySelectorAll('.type-opt').forEach(opt => opt.classList.remove('active'));
+
+            element.classList.add('active');
+
+            selectedPetType = type;
+
+        }
+
+
+
+        async function submitCreation() {
+
+            const nameInput = document.getElementById('input-name').value.trim();
+
+            if(!nameInput) return alert('Дай питомцу имя!');
+
+            const response = await fetch('/api/create_pet', {
+
+                method: 'POST',
+
+                headers: {'Content-Type': 'application/json'},
+
+                body: JSON.stringify({ userId, name: nameInput, type: selectedPetType })
+
+            });
+
+            const data = await response.json();
+
+            showMainScreen(data.pet);
+
+        }
+
+
+
+        async function performAction(action) {
+
+            const response = await fetch('/api/action', {
+
+                method: 'POST',
+
+                headers: {'Content-Type': 'application/json'},
+
+                body: JSON.stringify({ userId, action })
+
+            });
+
+            const data = await response.json();
+
+            if (data.pet.is_alive === 0) showDeadScreen();
+            else updateUI(data.pet);
+
+            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+
+        }
+
+
+
+        function updateUI(pet) {
+
+            document.getElementById('display-name').innerText = pet.name;
+
+            document.getElementById('val-level').innerText = pet.level;
+
+            document.getElementById('val-coins').innerText = pet.coins;
+
+            document.getElementById('txt-satiety').innerText = pet.satiety + '%';
+
+            document.getElementById('txt-happiness').innerText = pet.happiness + '%';
+
+            document.getElementById('txt-energy').innerText = pet.energy + '%';
+
+            document.getElementById('bar-satiety').style.width = pet.satiety + '%';
+
+            document.getElementById('bar-happiness').style.width = pet.happiness + '%';
+
+            document.getElementById('bar-energy').style.width = pet.energy + '%';
+
+            let maxXp = pet.level * 100;
+
+            document.getElementById('bar-xp').style.width = ((pet.xp / maxXp) * 100) + '%';
+
+
+
+            const av = document.getElementById('main-avatar');
+
+            const avatars = {
+
+                cat: { normal: '😸', sad: '😿', happy: '🥰', tired: '😴' },
+
+                dog: { normal: '🐶', sad: '😢', happy: '🤪', tired: '💤' },
+
+                hamster: { normal: '🐹', sad: '🐹💧', happy: '🐹✨', tired: '🐹💤' }
+
+            };
+
+            let currentSet = avatars[pet.type] || avatars.cat;
+
+            if (pet.satiety < 30 || pet.happiness < 30) av.innerText = currentSet.sad;
+
+            else if (pet.energy < 25) av.innerText = currentSet.tired;
+
+            else if (pet.satiety > 80 && pet.happiness > 80) av.innerText = currentSet.happy;
+
+            else av.innerText = currentSet.normal;
+
+        }
+
+        initGame();
+
+        setInterval(initGame, 20000);
+
+    </script>
+
+</body>
+
+</html>
