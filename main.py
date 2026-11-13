@@ -1,6 +1,7 @@
 ﻿import os
 import asyncio
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -8,7 +9,6 @@ from pydantic import BaseModel
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from dotenv import load_dotenv
 
 import database as db_api
 
@@ -32,7 +32,7 @@ class ActionRequest(BaseModel):
     action: str
 
 
-bot = Bot(token=9237944530:AAH0e9rpzZZOkDdgG6eTtpcAJQE9tSJRSNo)
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 
@@ -85,3 +85,4 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port)
+
